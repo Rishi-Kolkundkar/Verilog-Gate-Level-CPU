@@ -11,7 +11,6 @@ The entire journey involved designing the Instruction Set Architecture (ISA), im
 - **Custom 16-bit RISC ISA:** A simple yet powerful instruction set with R-Type, I-Type, and J-Type formats.
 - **Gate-Level Verilog Design:** Implemented using basic logic gates and modules, providing a clear view of the hardware structure.
 - **Single-Cycle Datapath:** A classic single-cycle processor design.
-- **Hazard-Aware Programming:** The design's simplicity requires manual insertion of `NOP`s to handle data hazards, a key learning aspect of CPU design.
 - **Custom Assembler:** A Python script is included to translate assembly code into the Verilog ROM module, streamlining the development process.
 - **Proven in Simulation:** The CPU has been successfully tested with a factorial program (`5! = 120`), proving the correctness of the design and its ability to handle loops and conditional branches.
 
