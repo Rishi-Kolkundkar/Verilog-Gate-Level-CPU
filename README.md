@@ -56,7 +56,111 @@ The MyCPU-16 ISA is designed for simplicity and educational clarity. It features
 ├── tb_cpu.v              # The testbench for simulating the CPU
 └── assembler.py          # Python script to assemble code into a Verilog ROM
 ```
+### Architecture Block Diagram
 
+This diagram illustrates the single-cycle datapath of the MyCPU-16, logically organized by the five classic pipeline stages.
+
+```mermaid
+graph TD
+    %% Define all nodes (components) first, grouped by stage for readability.
+    subgraph "1. Instruction Fetch"
+        direction LR
+        PC_Mux_Jump[("mux_2_to_1<br><b>Jump Mux</b>")]
+        PC_Reg[("eight_bit_register<br><b>Program Counter</b>")]
+        IM[("instruction_memory<br><b>Instruction ROM</b>")]
+        PC_Adder[("PC_adder<br>PC + 2")]
+        PC_Branch_Adder[("PC_Branch_Adder<br><b>Branch Target Calc</b>")]
+        PC_Mux_Branch[("mux_2_to_1<br><b>Branch Mux</b>")]
+    end
+
+    subgraph "2. Decode & Register Access"
+        direction LR
+        RF[("Register_File<br><b>Register File</b>")]
+        RegDst_Mux[("mux_2_to_1<br><b>RegDst Mux</b>")]
+        Sign_Extend[("sign_extend<br><b>Sign Extender</b>")]
+    end
+    
+    subgraph "3. Execute"
+        direction LR
+        ALU_Mux[("mux_2_to_1<br><b>ALUSrc Mux</b>")]
+        ALU[("ALU<br><b>ALU</b>")]
+        AND_Gate{("and<br><b>PCSrc</b>")}
+    end
+
+    subgraph "4. Memory Access"
+        direction LR
+        DM[("data_memory<br><b>Data RAM</b>")]
+    end
+
+    subgraph "5. Write-Back"
+        direction LR
+        Mem_Mux[("mux_2_to_1<br><b>MemtoReg Mux</b>")]
+    end
+
+    subgraph "Control Logic"
+        direction TB
+        CU[("control_unit<br><b>Main Control</b>")]
+        AC[("alu_control<br><b>ALU Decoder</b>")]
+    end
+
+    %% Now, define all connections between the nodes.
+    %% This allows connections to cross subgraph boundaries correctly.
+    
+    %% Fetch Stage Connections
+    PC_Mux_Jump -- "Final Next PC" --> PC_Reg
+    PC_Reg -- "Current PC" --> IM
+    PC_Reg -- "Current PC" --> PC_Adder
+    PC_Adder -- "PC+2" --> PC_Branch_Adder
+    PC_Adder -- "PC+2" --> PC_Mux_Branch
+    PC_Branch_Adder -- "Branch Target Addr" --> PC_Mux_Branch
+    PC_Mux_Branch -- "PC_curr (Branch Logic)" --> PC_Mux_Jump
+    
+    %% Decode Stage Connections
+    IM -- "Instruction [15:0]" --> Sign_Extend
+    IM -- "Instruction [15:12] Opcode" --> CU
+    IM -- "Instruction [2:0] Funct" --> AC
+    IM -- "Read Addrs [11:9], [8:6]" --> RF
+    IM -- "Write Addrs [8:6], [5:3]" --> RegDst_Mux
+    IM -- "Jump Addr [7:0]" --> PC_Mux_Jump
+    RegDst_Mux -- "Write Register Addr" --> RF
+
+    %% Execute Stage Connections
+    RF -- "Read Data 1" --> ALU
+    RF -- "Read Data 2" --> ALU_Mux
+    Sign_Extend -- "Sign-Extended Imm" --> ALU_Mux
+    ALU_Mux -- "Operand B" --> ALU
+    ALU -- "Zero Flag" --> AND_Gate
+    
+    %% Memory Stage Connections
+    ALU -- "ALU Result (Address)" --> DM
+    RF -- "Read Data 2 (Write Data)" --> DM
+    
+    %% Write-Back Stage Connections
+    ALU -- "ALU Result" --> Mem_Mux
+    DM -- "Read Data from RAM" --> Mem_Mux
+    Mem_Mux -- "Final Write Data" --> RF
+
+    %% Control Signal Connections
+    CU -- "ALUOp" --> AC
+    CU -- "RegWrite" --> RF
+    CU -- "RegDst" --> RegDst_Mux
+    CU -- "ALUSrc" --> ALU_Mux
+    CU -- "Branch" --> AND_Gate
+    CU -- "Jump" --> PC_Mux_Jump
+    CU -- "MemRead / MemWrite" --> DM
+    CU -- "MemtoReg" --> Mem_Mux
+    AC -- "ALUControl bits" --> ALU
+    AND_Gate -- "PCSrc (Take Branch?)" --> PC_Mux_Branch
+
+    %% Styling
+    style PC_Reg fill:#cde4ff,stroke:#6a8ebf,stroke-width:2px
+    style IM fill:#cde4ff,stroke:#6a8ebf,stroke-width:2px
+    style RF fill:#dae8fc,stroke:#6c8ebf,stroke-width:2px
+    style ALU fill:#ffe6cc,stroke:#bf9f6a,stroke-width:2px
+    style DM fill:#d5e8d4,stroke:#82b366,stroke-width:2px
+    style CU fill:#f8cecc,stroke:#b85450,stroke-width:2px
+    style AC fill:#f8cecc,stroke:#b85450,stroke-width:2px
+```
 ---
 
 ## Getting Started
