@@ -14,6 +14,7 @@
 //     MUX_8 MUX_87 ({A[7], 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0}, S, Y[7]);
 // endmodule
 
+//Commented part is the Gate level
 module shift_right (
     input  wire [7:0] A,
     input  wire [2:0] S,
@@ -21,3 +22,4 @@ module shift_right (
 );
     assign Y = A >> S;
 endmodule
+
