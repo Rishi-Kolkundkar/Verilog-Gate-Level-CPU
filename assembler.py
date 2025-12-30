@@ -3,7 +3,7 @@ import sys
 def assemble(instruction):
     """
     Assembles a single line of MyCPU-16 assembly into a 16-bit hex code.
-    This version uses only numerical inputs for addresses and immediates.
+    
     """
     opcodes = {
         'add':  '0000', 'sub':  '0000', 'slt':  '0000', 'and': '0000', 'or': '0000',
@@ -122,4 +122,5 @@ def main():
             print("\nInvalid choice.")
 
 if __name__ == "__main__":
+
     main()
