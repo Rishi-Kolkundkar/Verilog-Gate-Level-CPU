@@ -1,10 +1,4 @@
-// module shift_left (
-//     input  wire [7:0] In,
-//     output wire [7:0] Out
-// );
-    
-//     assign Out = { In[6:0], 1'b0 };
-// endmodule
+//Bitwise left shift
 
 module shift_left #(parameter WIDTH=8) (
     input  wire [WIDTH-1:0] In,
@@ -12,3 +6,4 @@ module shift_left #(parameter WIDTH=8) (
 );
     assign Out = { In[WIDTH-2:0], 1'b0 };
 endmodule
+
