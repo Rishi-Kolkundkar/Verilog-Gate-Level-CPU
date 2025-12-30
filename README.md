@@ -1,244 +1,113 @@
-# MyCPU-16: A Custom 16-bit RISC CPU in Verilog
+# Verilog Gate-Level CPU (MyCPU-16)
 
 
 
-This repository documents the complete design, implementation, and programming of **MyCPU-16**, a custom 16-bit RISC (Reduced Instruction Set Computer) processor. Built from the ground up using Verilog, this project serves as a practical demonstration of fundamental computer architecture principles, from digital logic design to assembly-level programming.
+This repository documents the complete design, implementation, and programming of a custom 8-bit RISC processor, built from the ground up using gate-level Verilog. The project showcases the fundamental principles of computer architecture, from digital logic design to assembly language programming.
 
-The entire journey involved designing the Instruction Set Architecture (ISA), implementing the datapath and control unit, writing an assembler in Python, and successfully running a program on the final hardware simulation.
+The processor features an **8-bit datapath** (including an 8-bit ALU and registers) but operates on a custom **16-bit instruction set**, demonstrating a practical tradeoff between hardware complexity and instruction expressiveness.
+
+---
 
 ## Key Features
 
-- **Custom 16-bit RISC ISA:** A simple yet powerful instruction set with R-Type, I-Type, and J-Type formats.
-- **Gate-Level Verilog Design:** Implemented using basic logic gates and modules, providing a clear view of the hardware structure.
-- **Single-Cycle Datapath:** A classic single-cycle processor design.
-- **Custom Assembler:** A Python script is included to translate assembly code into the Verilog ROM module, streamlining the development process.
-- **Proven in Simulation:** The CPU has been successfully tested with a factorial program (`5! = 120`), proving the correctness of the design and its ability to handle loops and conditional branches.
+-   **8-bit Datapath:** All data operations, including arithmetic and logic, are performed on 8-bit values.
+-   **16-bit RISC ISA:** A custom fixed-width 16-bit instruction set with R-Type, I-Type, and J-Type formats.
+-   **Gate-Level Design:** The CPU is implemented using fundamental logic gates (`and`, `or`, `not`, etc.) in Verilog, avoiding higher-level behavioral constructs.
+-   **Data Memory Support:** Includes a fully functional data memory module, enabling `lw` (load word) and `sw` (store word) instructions.
+-   **Custom Toolchain:** Includes a menu-driven assembler written in Python that translates custom assembly language into machine code for the CPU's ROM.
+-   **Proven in Simulation:** The processor has been successfully tested and proven to execute complex programs like calculating the factorial of 5.
 
 ---
 
 ## Instruction Set Architecture (ISA)
 
-The MyCPU-16 ISA is designed for simplicity and educational clarity. It features 8 general-purpose registers (`R0`-`R7`), where `R0` is hardwired to zero.
+The MyCPU-16 ISA is designed for simplicity and educational clarity. It features **8 general-purpose 8-bit registers (`R0`-`R7`)**, where `R0` is hardwired to zero. All instructions are 16 bits long.
 
 ### Instruction Formats
 
-| Type | 15-12 | 11-9 | 8-6 | 5-3 | 2-0 | Description |
-| :--- |:---:|:---:|:---:|:---:|:---:|:--- |
-| **R-Type** | `0000` | `Rs` | `Rt` | `Rd` |`Funct`| Register-to-register operations. |
-| **I-Type** | Opcode | `Rs` | `Rt` | \multicolumn{2}{c|}{Immediate (6-bit)} | Operations with an immediate value. |
-| **J-Type** | `0010` | \multicolumn{3}{c|}{Address (8-bit)} | `----` | Unconditional jumps. |
+There are three primary instruction formats:
 
-### Instruction Set
+#### R-Type (Register)
+Used for register-to-register arithmetic and logical operations.
+| Bits | 15-12 | 11-9 | 8-6 | 5-3 | 2-0 |
+|:---|:---:|:---:|:---:|:---:|:---:|
+| **Field** | `Opcode` | `Rs` | `Rt` | `Rd` | `Funct` |
+| **Value** | `0000` | Source Reg | Source Reg | Dest Reg | Function |
 
-| Mnemonic | Opcode | Funct | Type | Syntax | Operation |
+#### I-Type (Immediate)
+Used for operations involving a register and a 6-bit signed immediate value.
+| Bits | 15-12 | 11-9 | 8-6 | 5-0 |
+|:---|:---:|:---:|:---:|:---:|
+| **Field** | `Opcode` | `Rs` | `Rt` | `Immediate` |
+| **Value** | (various) | Base/Source Reg | Dest Reg | `[-32, 31]` |
+
+#### J-Type (Jump)
+Used for unconditional jumps to an 8-bit address.
+| Bits | 15-12 | 11-8 | 7-0 |
+|:---|:---:|:---:|:---:|
+| **Field** | `Opcode` | `Unused` | `Address` |
+| **Value** | `0010` | `0000` | `[0, 255]` |
+
+### Complete Instruction List
+
+| Mnemonic | Opcode | Funct | Type | Assembly Syntax | Operation Description |
 |:---|:---:|:---:|:---:|:---|:---|
-| `add` | `0000` | `010` | R | `add rd, rs, rt` | `Rd = Rs + Rt` |
-| `sub` | `0000` | `011` | R | `sub rd, rs, rt` | `Rd = Rs - Rt` |
-| `slt` | `0000` | `100` | R | `slt rd, rs, rt` | `Rd = (Rs < Rt) ? 1 : 0` |
-| `and` | `0000` | `000` | R | `and rd, rs, rt` | `Rd = Rs & Rt` |
-| `or`  | `0000` | `001` | R | `or rd, rs, rt`  | `Rd = Rs \| Rt` |
-| `addi`| `1000` | - | I | `addi rt, rs, imm` | `Rt = Rs + Imm` |
-| `beq` | `1011` | - | I | `beq rs, rt, offset` | `if (Rs==Rt) PC += offset` |
-| `j`   | `0010` | - | J | `j addr` | `PC = addr` |
-| `halt`| `1111` | - | - | `halt` | Stops the simulation. |
-| `nop` | `0000` | - | - | `nop` | No operation (`add r0,r0,r0`) |
+| **`add`** | `0000` | `010` | R | `add rd, rs, rt` | `Rd = Rs + Rt` |
+| **`sub`** | `0000` | `011` | R | `sub rd, rs, rt` | `Rd = Rs - Rt` |
+| **`and`** | `0000` | `000` | R | `and rd, rs, rt` | `Rd = Rs & Rt` (Bitwise AND) |
+| **`or`** | `0000` | `001` | R | `or rd, rs, rt` | `Rd = Rs \| Rt` (Bitwise OR) |
+| **`slt`** | `0000` | `100` | R | `slt rd, rs, rt` | `Rd = (Rs < Rt) ? 1 : 0` |
+| **`addi`**| `1000` |  -  | I | `addi rt, rs, imm` | `Rt = Rs + Immediate` |
+| **`lw`**  | `1001` |  -  | I | `lw rt, imm(rs)` | `Rt = Memory[Rs + Imm]` |
+| **`sw`**  | `1010` |  -  | I | `sw rt, imm(rs)` | `Memory[Rs + Imm] = Rt` |
+| **`beq`** | `1011` |  -  | I | `beq rs, rt, offset` | `if (Rs==Rt) PC += offset` |
+| **`j`**   | `0010` |  -  | J | `j address` | `PC = address` |
+| **`halt`**| `1111` |  -  | J-like | `halt` | Stops the CPU clock. |
+| **`nop`** | `0000` | `010` | R | `nop` | No operation (`add r0, r0, r0`) |
 
 ---
 
-## Project Structure
+## Project Structure (In a Broad manner)
 
 ```
 .
-├── alu.v                 # Arithmetic Logic Unit
-├── control_unit.v        # Main control logic, decodes opcodes
-├── cpu.v                 # Top-level CPU module, connects all components
-├── instruction_memory.v  # The program ROM, holds the machine code
+├── alu.v                 # 8-bit Arithmetic Logic Unit
+├── control_unit.v        # Main control logic and instruction decoder
+├── cpu.v                 # Top-level CPU module integrating all components
+├── data_memory.v         # Data RAM for lw/sw instructions
+├── instruction_memory.v  # The program ROM (can be generated by the assembler)
 ├── tb_cpu.v              # The testbench for simulating the CPU
-└── assembler.py          # Python script to assemble code into a Verilog ROM
+└── assembler.py     # Python script for assembling programs
+|__ register_file.v #Cosists of Registers to store results for read/write
 ```
-### Architecture Block Diagram
 
-This diagram illustrates the single-cycle datapath of the MyCPU-16, logically organized by the five classic pipeline stages.
-
-```mermaid
-graph TD
-    %% Define all nodes (components) first, grouped by stage for readability.
-    subgraph "1. Instruction Fetch"
-        direction LR
-        PC_Mux_Jump[("mux_2_to_1<br><b>Jump Mux</b>")]
-        PC_Reg[("eight_bit_register<br><b>Program Counter</b>")]
-        IM[("instruction_memory<br><b>Instruction ROM</b>")]
-        PC_Adder[("PC_adder<br>PC + 2")]
-        PC_Branch_Adder[("PC_Branch_Adder<br><b>Branch Target Calc</b>")]
-        PC_Mux_Branch[("mux_2_to_1<br><b>Branch Mux</b>")]
-    end
-
-    subgraph "2. Decode & Register Access"
-        direction LR
-        RF[("Register_File<br><b>Register File</b>")]
-        RegDst_Mux[("mux_2_to_1<br><b>RegDst Mux</b>")]
-        Sign_Extend[("sign_extend<br><b>Sign Extender</b>")]
-    end
-    
-    subgraph "3. Execute"
-        direction LR
-        ALU_Mux[("mux_2_to_1<br><b>ALUSrc Mux</b>")]
-        ALU[("ALU<br><b>ALU</b>")]
-        AND_Gate{("and<br><b>PCSrc</b>")}
-    end
-
-    subgraph "4. Memory Access"
-        direction LR
-        DM[("data_memory<br><b>Data RAM</b>")]
-    end
-
-    subgraph "5. Write-Back"
-        direction LR
-        Mem_Mux[("mux_2_to_1<br><b>MemtoReg Mux</b>")]
-    end
-
-    subgraph "Control Logic"
-        direction TB
-        CU[("control_unit<br><b>Main Control</b>")]
-        AC[("alu_control<br><b>ALU Decoder</b>")]
-    end
-
-    %% Now, define all connections between the nodes.
-    %% This allows connections to cross subgraph boundaries correctly.
-    
-    %% Fetch Stage Connections
-    PC_Mux_Jump -- "Final Next PC" --> PC_Reg
-    PC_Reg -- "Current PC" --> IM
-    PC_Reg -- "Current PC" --> PC_Adder
-    PC_Adder -- "PC+2" --> PC_Branch_Adder
-    PC_Adder -- "PC+2" --> PC_Mux_Branch
-    PC_Branch_Adder -- "Branch Target Addr" --> PC_Mux_Branch
-    PC_Mux_Branch -- "PC_curr (Branch Logic)" --> PC_Mux_Jump
-    
-    %% Decode Stage Connections
-    IM -- "Instruction [15:0]" --> Sign_Extend
-    IM -- "Instruction [15:12] Opcode" --> CU
-    IM -- "Instruction [2:0] Funct" --> AC
-    IM -- "Read Addrs [11:9], [8:6]" --> RF
-    IM -- "Write Addrs [8:6], [5:3]" --> RegDst_Mux
-    IM -- "Jump Addr [7:0]" --> PC_Mux_Jump
-    RegDst_Mux -- "Write Register Addr" --> RF
-
-    %% Execute Stage Connections
-    RF -- "Read Data 1" --> ALU
-    RF -- "Read Data 2" --> ALU_Mux
-    Sign_Extend -- "Sign-Extended Imm" --> ALU_Mux
-    ALU_Mux -- "Operand B" --> ALU
-    ALU -- "Zero Flag" --> AND_Gate
-    
-    %% Memory Stage Connections
-    ALU -- "ALU Result (Address)" --> DM
-    RF -- "Read Data 2 (Write Data)" --> DM
-    
-    %% Write-Back Stage Connections
-    ALU -- "ALU Result" --> Mem_Mux
-    DM -- "Read Data from RAM" --> Mem_Mux
-    Mem_Mux -- "Final Write Data" --> RF
-
-    %% Control Signal Connections
-    CU -- "ALUOp" --> AC
-    CU -- "RegWrite" --> RF
-    CU -- "RegDst" --> RegDst_Mux
-    CU -- "ALUSrc" --> ALU_Mux
-    CU -- "Branch" --> AND_Gate
-    CU -- "Jump" --> PC_Mux_Jump
-    CU -- "MemRead / MemWrite" --> DM
-    CU -- "MemtoReg" --> Mem_Mux
-    AC -- "ALUControl bits" --> ALU
-    AND_Gate -- "PCSrc (Take Branch?)" --> PC_Mux_Branch
-
-    %% Styling
-    style PC_Reg fill:#cde4ff,stroke:#6a8ebf,stroke-width:2px
-    style IM fill:#cde4ff,stroke:#6a8ebf,stroke-width:2px
-    style RF fill:#dae8fc,stroke:#6c8ebf,stroke-width:2px
-    style ALU fill:#ffe6cc,stroke:#bf9f6a,stroke-width:2px
-    style DM fill:#d5e8d4,stroke:#82b366,stroke-width:2px
-    style CU fill:#f8cecc,stroke:#b85450,stroke-width:2px
-    style AC fill:#f8cecc,stroke:#b85450,stroke-width:2px
-```
 ---
 
 ## Getting Started
 
 To compile and run a simulation of the CPU, you will need a Verilog simulator like [Icarus Verilog](http://iverilog.icarus.com/).
 
-### 1. Compile the Verilog Source
+1.  **Generate the ROM (Optional):**
+    Use the included Python assembler to create a program and generate the `instruction_memory.v` file.
+    ```bash
+    python menu_assembler.py
+    ```
 
-Compile all the Verilog modules, including the testbench, into a single simulation file.
+2.  **Compile the Verilog Files:**
+    Compile the testbench and all CPU source files into a single simulation executable.
+    ```bash
+    iverilog -o tb_cpu.vvp *.v
+    ```
 
-```sh
-iverilog -o tb_cpu.vvp *.v
-```
-
-### 2. Run the Simulation
-
-Execute the compiled file using `vvp`. The testbench will start the clock and print the state of the CPU at each cycle.
-
-```sh
-vvp tb_cpu.vvp
-```
-
-You will see output logs showing the Program Counter (PC), the instruction being executed, and the data being written to the register file, like this:
-
-```
-Time=25000 | PC=00 | Instr=8041 | ALU=01 | RegWrite=1 | WAddr=1 | WData=01
-Time=30000 | PC=02 | Instr=8085 | ALU=05 | RegWrite=1 | WAddr=2 | WData=05
-...
-```
+3.  **Run the Simulation:**
+    Execute the compiled file using `vvp`. The output will be piped to the console, showing the state of the CPU at each clock cycle.
+    ```bash
+    vvp tb_cpu.vvp
+    ```
 
 ---
 
 ## Showcase: Factorial of 5
 
-The `instruction_memory.v` file in this repository contains the machine code for a program that calculates the factorial of 5 (5! = 120). This program demonstrates the CPU's ability to handle loops, branches, and multi-step calculations.
-
-Here is the assembly source code for the successful factorial program:
-
-```assembly
-// R1: FINAL_RESULT, R2: N, R3: MULT_COUNTER, R4: VALUE_TO_ADD, R5: ONE
-// -- Initialization --
-addi r1, r0, 1       // FINAL_RESULT = 1
-addi r2, r0, 5       // N = 5
-addi r5, r0, 1       // ONE = 1
-
-// -- OUTER_LOOP (at PC=0x06) --
-beq r2, r5, 8        // if (N == 1) branch to HALT (at PC=0x1A)
-
-// -- Setup for Multiplication --
-add r4, r1, r0       // VALUE_TO_ADD = FINAL_RESULT
-addi r3, r2, -1      // MULT_COUNTER = N - 1
-
-// -- INNER_LOOP (at PC=0x0C) --
-beq r3, r0, 3        // if (MULT_COUNTER == 0) branch to END_INNER (at PC=0x14)
-add r1, r1, r4       // FINAL_RESULT += VALUE_TO_ADD (Efficient accumulation)
-addi r3, r3, -1      // MULT_COUNTER--
-j 12                 // Jump back to INNER_LOOP
-
-// -- END_INNER (at PC=0x14) --
-nop                  // Pipeline stall
-
-// -- END_OUTER --
-addi r2, r2, -1      // N--
-j 6                  // Jump back to OUTER_LOOP
-
-// -- HALT (at PC=0x1A) --
-halt
-```
-
-Running the simulation with this ROM will show the final value `0x78` (120) being written to `R1`.
-
-## Development Tool: Python Assembler
-
-An interactive Python script (`assembler.py`) was developed to make programming the CPU easier. It provides a menu-driven interface to write assembly instructions, which it then converts into a ready-to-use `instruction_memory.v` file, which essentially the ROM.
-
-```python
-# To run the assembler:
-python3 assembler.py
-```
-
+The repository includes a pre-written `instruction_memory.v` that calculates the factorial of 5 (5! = 120). This program uses nested loops and repeated addition for multiplication, demonstrating the CPU's ability to handle complex control flow. When simulated, the log will show the step-by-step execution, culminating in the value `0x78` (120) being written to a register.
 
