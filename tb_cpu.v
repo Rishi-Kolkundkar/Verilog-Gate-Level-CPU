@@ -1,3 +1,4 @@
+//This version of the testbench is for Diagnostic purposes to see the under the hood working of the CPU. 
 // `timescale 1ns/1ps
 
 // module cpu_tb;
@@ -52,7 +53,7 @@
 
 
 
-
+//Simplified testbench
 `timescale 1ns/1ps
 
 module tb_cpu;
@@ -105,3 +106,4 @@ module tb_cpu;
     end
 
 endmodule
+
