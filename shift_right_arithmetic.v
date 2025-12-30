@@ -17,7 +17,7 @@
 // endmodule   
 
 
-
+//Commented part is the Gate level implementation
 module shift_right_arithmetic (
     input  wire [7:0] A,
     input  wire [2:0] S,
@@ -25,3 +25,4 @@ module shift_right_arithmetic (
 );
     assign Y = $signed(A) >>> S;
 endmodule
+
