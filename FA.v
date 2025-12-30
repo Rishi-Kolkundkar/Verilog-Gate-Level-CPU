@@ -1,3 +1,4 @@
+//Full Adder Module
 module FA (
     input wire Cin,
     input wire A,
@@ -19,3 +20,4 @@ module FA (
 
 
 endmodule
+
