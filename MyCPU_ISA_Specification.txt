@@ -1,0 +1,173 @@
+################################################################################
+#
+# ISA Specification: MyCPU-16 Gate-Level Definition
+# Version: 1.0 (Derived from control_unit.v and alu_control.v)
+#
+################################################################################
+
+
+#===============================================================================
+# 1. CPU Characteristics
+#===============================================================================
+
+- Architecture: 16-bit, custom RISC-style
+- Endianness: Little Endian
+- Register Count: 8 general-purpose registers (R0-R7)
+- Special Registers: R0 is hardwired to the value zero.
+
+
+#===============================================================================
+# 2. Instruction Formats
+#===============================================================================
+
+#-- R-Type (Register-to-Register) --
+# Used for operations between registers.
+#
+# Bits | 15 14 13 12 | 11 10 9 | 8 7 6 | 5 4 3 | 2 1 0 |
+#      |-------------|---------|-------|-------|-------|
+# Field|   Opcode    |   Rs    |  Rt   |  Rd   | Funct |
+
+#-- I-Type (Immediate) --
+# Used for operations with a small constant value.
+#
+# Bits | 15 14 13 12 | 11 10 9 | 8 7 6 | 5 4 3 2 1 0 |
+#      |-------------|---------|-------|-------------|
+# Field|   Opcode    |   Rs    |  Rt   |  Immediate  |
+
+#-- J-Type (Jump) --
+# Used for unconditional jumps.
+#
+# Bits | 15 14 13 12 | 11 10 9 8 | 7 6 5 4 3 2 1 0 |
+#      |-------------|-----------|-----------------|
+# Field|   Opcode    |  (unused) |   Jump Address  |
+
+
+#===============================================================================
+# 3. Instruction Set Details
+#===============================================================================
+
+--------------------------------------------------------------------------------
+Mnemonic: add (add)
+Format:   R-Type
+Opcode:   0000
+Funct:    001
+Syntax:   add Rd, Rs, Rt
+Action:   Rd = Rs + Rt
+ALUOp:    10 -> Funct determines ALU operation
+RegWrite: 1
+RegDst:   1 (Destination is Rd)
+
+--------------------------------------------------------------------------------
+Mnemonic: sub (subtract)
+Format:   R-Type
+Opcode:   0000
+Funct:    010
+Syntax:   sub Rd, Rs, Rt
+Action:   Rd = Rs - Rt
+ALUOp:    10 -> Funct determines ALU operation
+RegWrite: 1
+RegDst:   1 (Destination is Rd)
+
+--------------------------------------------------------------------------------
+Mnemonic: slt (set on less than)
+Format:   R-Type
+Opcode:   0000
+Funct:    011
+Syntax:   slt Rd, Rs, Rt
+Action:   Rd = (Rs < Rt) ? 1 : 0
+ALUOp:    10 -> Funct determines ALU operation
+RegWrite: 1
+RegDst:   1 (Destination is Rd)
+
+--------------------------------------------------------------------------------
+Mnemonic: and (bitwise AND)
+Format:   R-Type
+Opcode:   0000
+Funct:    100
+Syntax:   and Rd, Rs, Rt
+Action:   Rd = Rs & Rt
+ALUOp:    10 -> Funct determines ALU operation
+RegWrite: 1
+RegDst:   1 (Destination is Rd)
+
+--------------------------------------------------------------------------------
+Mnemonic: or (bitwise OR)
+Format:   R-Type
+Opcode:   0000
+Funct:    101
+Syntax:   or Rd, Rs, Rt
+Action:   Rd = Rs | Rt
+ALUOp:    10 -> Funct determines ALU operation
+RegWrite: 1
+RegDst:   1 (Destination is Rd)
+
+--------------------------------------------------------------------------------
+Mnemonic: addi (add immediate)
+Format:   I-Type
+Opcode:   1000
+Syntax:   addi Rt, Rs, Immediate
+Action:   Rt = Rs + sign_extend(Immediate)
+ALUOp:    00 -> Forces ALU to ADD
+RegWrite: 1
+RegDst:   0 (Destination is Rt)
+
+--------------------------------------------------------------------------------
+Mnemonic: lw (load word)
+Format:   I-Type
+Opcode:   1001
+Syntax:   lw Rt, Immediate(Rs)
+Action:   Rt = Memory[Rs + sign_extend(Immediate)]
+ALUOp:    00 -> Forces ALU to ADD for address calculation
+RegWrite: 1
+RegDst:   0 (Destination is Rt)
+MemRead:  1
+MemtoReg: 1
+
+--------------------------------------------------------------------------------
+Mnemonic: sw (store word)
+Format:   I-Type
+Opcode:   1010
+Syntax:   sw Rt, Immediate(Rs)
+Action:   Memory[Rs + sign_extend(Immediate)] = Rt
+ALUOp:    00 -> Forces ALU to ADD for address calculation
+RegWrite: 0
+MemWrite: 1
+
+--------------------------------------------------------------------------------
+Mnemonic: beq (branch on equal)
+Format:   I-Type
+Opcode:   1011
+Syntax:   beq Rs, Rt, Label
+Action:   If (Rs == Rt), PC = PC + 2 + (sign_extend(Immediate) << 1)
+ALUOp:    01 -> Forces ALU to SUB for comparison
+RegWrite: 0
+Branch:   1
+
+--------------------------------------------------------------------------------
+Mnemonic: j (jump)
+Format:   J-Type
+Opcode:   0010
+Syntax:   j TargetAddress
+Action:   PC = TargetAddress
+RegWrite: 0
+Jump:     1
+
+--------------------------------------------------------------------------------
+Mnemonic: halt (halt simulation)
+Format:   Special
+Opcode:   1111
+Syntax:   halt
+Action:   Stops the CPU/simulation.
+Notes:    This is implemented as 0xF000. All control signals are 0.
+
+--------------------------------------------------------------------------------
+Mnemonic: nop (no operation)
+Format:   Special
+Opcode:   0000 (with Rd=R0)
+Syntax:   nop
+Action:   No operation. (Specifically `add R0, R0, R0`)
+Notes:    Used to resolve pipeline hazards. Machine code is 0x0001.
+
+################################################################################
+# End of Specification
+################################################################################
