@@ -90,7 +90,7 @@ To compile and run a simulation of the CPU, you will need a Verilog simulator li
 1.  **Generate the ROM (Optional):**
     Use the included Python assembler to create a program and generate the `instruction_memory.v` file.
     ```bash
-    python menu_assembler.py
+    python assembler.py
     ```
 
 2.  **Compile the Verilog Files:**
